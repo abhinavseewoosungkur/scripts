@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Automates the configuration of the Oleg firmware to automount the /opt , /mnt and swap partitions. 
+# The script also configures services to be started and stopped at router boot and shutdown. 
+# This script assumes that the first partition is destined for /opt, the second partition for swap and the third partition for data.
+
 echo Info: Checking for a partition appropriate for entware...
 
 if [ -e "/dev/discs/disca/part1" ]
@@ -8,7 +12,7 @@ if [ -e "/dev/discs/disca/part1" ]
     echo Info: Writing mount point for /dev/discs/disca/part1 in fstab
     echo "#device                 Mountpoint      FStype  Options         Dump    Pass#" >> /etc/fstab
     echo "/dev/discs/disca/part1  /opt            ext3    rw,noatime      1       1" >> /etc/fstab
-  else
+else
     echo Warning: Partition not found for entware installation, exiting...
     exit 1
 fi
@@ -25,11 +29,11 @@ fi
 
 echo Info: Checking for a suitable swap partition...
 if [ -e "/dev/discs/disca/part2" ]
-    then
+then
     echo Info: Found swap partition
     echo Info: Writing mount point for /dev/discs/disca/part2 in fstab
-    echo "/dev/discs/disca/part2  none            swap    sw              0       0">> /etc/fstab
-    else
+    echo "/dev/discs/disca/part2  none            swap    sw              0       0" >> /etc/fstab
+else
     echo Info: No swap partition found
 fi
 
