@@ -8,6 +8,10 @@ error() {
     echo -e "\033[31mError: $1\033[0m"
 }
 
+success() {
+    echo -e "\033[32mSuccess: $1\033[0m"
+}
+
 info() {
     echo -e "Info: $1"
 }
@@ -17,14 +21,43 @@ drive_size() {
     echo `fdisk -l | grep 'Disk $1' | cut -d" " -f3,4 | cut -d"," -f1`
 }
 
+# arg1 partition number
+# arg2 partition size. Format type to be specified after size. 100M, 128k, 4G
+# arg3 The disk path. Example /dev/sda
 createpartition() {
-    echo "Creating partition $1 with $2 in disk $3"
+    info "Creating partition $1 with $2 in disk $3"
+    (echo n; echo p; echo $1; echo ; echo "+$2"; echo w) | fdisk $3
+    # new partition; primary; partition number; enter; size; write to disk
+    info "Partition $1 created"
+    if [ $1 == 2 ] # if swap
+    then
+	(echo t; echo $1; echo 82; echo w) | fdisk $3
+	info "Configured swap type"
+    fi
 }
 
 # clears the partition table
 clear_partition_table() {
     echo Clearing the partition table for disk $1
+    (echo o; echo w) | fdisk $1
+    info "The partition table has been cleared for disk $1"
 }
+
+# check if a partition exists with a format type
+# arg1 partition path
+# arg2 fdisk partition type number
+is_partition() {
+    foundPartition=0
+    if [ `fdisk -l | grep $1 | awk '{print $5}'` == $2 ]
+    then 
+	foundPartition=1
+	success "Partition created"
+    else
+	foundPartition=0
+	Error "Partition not created"
+    fi
+}
+
 
 # Find connected drives on the router
 driveCount=1 # initialize driveCount to 1
@@ -87,15 +120,9 @@ read optsize
 info "How much space would you like to allocate for the /mnt partition?"
 read mntsize
 
-#info $driveSize
-# start formatting drive here.
-
-# TODO: Delete all partitions before proceeding
-
-# initialize the partition count
-
 clear_partition_table $chosenDrive
 
+# initialize the partition count
 partitionCount=1
 for partitionsize in $optsize $swapsize $mntsize
 do
@@ -104,3 +131,66 @@ do
     partitionCount=`expr $partitionCount + 1`
     # echo $partitionCount
 done
+
+# Test if partitions have been created
+optpartition="$chosenDrive""1"
+info "Checking partition $optpartition /opt"
+is_partition $optpartition "83"
+if [ $foundPartition == 0 ]
+then
+    error "partition was not created. Exiting ..."
+    exit 1
+else
+    optpartitionfound=1
+fi
+
+optpartition="$chosenDrive""2"
+info "Checking partition $optpartition swap"
+is_partition $optpartition "82"
+if [ $foundPartition == 0 ]
+then
+    swappartitionfound=0
+    warning "partition was not created but installation will continue nevertheless."
+else
+    swappartitionfound=1
+fi
+
+optpartition="$chosenDrive""3"
+info "Checking partition $optpartition /mnt"
+is_partition $optpartition "83"
+if [ $foundPartition == 0 ]
+then
+     mntpartitionfound=0
+    warning "partition was not created but installation will continue nevertheless."
+else
+    mntpartitionfound=1
+fi
+
+# start formatting drive here.
+# format sda1 as ext3 /opt
+
+info "Formatting $chosenDrive""1"
+mkfs.ext3 "$chosenDrive""1"
+info "Format completed"
+echo ""
+
+# format sda2 as swap
+if [ $swappartitionfound == 1 ]
+then
+    info "Formatting $chosenDrive""2"
+    mkswap "$chosenDrive""2"
+    info "Format completed"
+    echo ""
+fi
+
+# format sda3 as ext3 /mnt
+if [ $mntpartitionfound == 1 ]
+then
+    info "Formatting $chosenDrive""3"
+    mkfs.ext3 "$chosenDrive""3"
+    info "Format completed"
+    echo ""
+fi
+
+
+# When partitions have been formatted, call prepare-oleg-entware script
