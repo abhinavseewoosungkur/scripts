@@ -199,3 +199,16 @@ fi
 
 
 # When partitions have been formatted, call prepare-oleg-entware script
+cd /tmp
+wget https://github.com/abhinavseewoosungkur/scripts/blob/master/prepare-oleg-entware.sh
+sh ./prepare-oleg-entware.sh
+
+cd /opt
+wget http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh
+sh ./entware_install.sh
+
+#### References ####
+# http://superuser.com/questions/332252/creating-and-formating-a-partition-using-a-bash-script
+# http://www.tldp.org/HOWTO/Partition/fdisk_partitioning.html
+# http://www.bashguru.com/2010/01/shell-colors-colorizing-shell-scripts.html
+# http://www.cyberciti.biz/faq/linux-partition-howto-set-labels/
