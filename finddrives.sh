@@ -168,11 +168,13 @@ fi
 
 # start formatting drive here.
 # format sda1 as ext3 /opt
-
 info "Formatting $chosenDrive""1"
 mkfs.ext3 "$chosenDrive""1"
 info "Format completed"
 echo ""
+info "Setting the partition label Entware"
+tune2fs -L Entware $chosenDrive"1"
+info "Label set"
 
 # format sda2 as swap
 if [ $swappartitionfound == 1 ]
@@ -190,6 +192,9 @@ then
     mkfs.ext3 "$chosenDrive""3"
     info "Format completed"
     echo ""
+    info "Setting partition label Data"
+    tune2fs -L Data $chosenDrive"3"
+    info "Label set"
 fi
 
 
