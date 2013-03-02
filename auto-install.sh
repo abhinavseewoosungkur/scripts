@@ -167,6 +167,13 @@ else
 fi
 
 # start formatting drive here.
+# umount all volumes before proceeding
+for mount in `blkid | cut -d":" -f1`
+do
+    info "unmounting $mount ..."
+    umount $mount
+done
+
 # format sda1 as ext3 /opt
 info "Formatting $chosenDrive""1"
 mkfs.ext3 "$chosenDrive""1"
@@ -200,7 +207,7 @@ fi
 
 # When partitions have been formatted, call prepare-oleg-entware script
 cd /tmp
-wget https://github.com/abhinavseewoosungkur/scripts/blob/master/prepare-oleg-entware.sh
+wget --no-check-certificate https://github.com/abhinavseewoosungkur/scripts/blob/develop/prepare-oleg-entware.sh
 sh ./prepare-oleg-entware.sh
 
 cd /opt
