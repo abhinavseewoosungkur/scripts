@@ -2,13 +2,10 @@
 
 # Automates the configuration of the Oleg firmware to automount the /opt , /mnt and swap partitions. 
 # The script also configures services to be started and stopped at router boot and shutdown. 
-# This script assumes that the first partition is destined for /opt, the second partition for swap and the third partition for data.
-
 
 warning() {
     echo -e "\033[33mWarning: $1\033[0m"
 }
-
 error() {
     echo -e "\033[31mError: $1\033[0m"
 }
@@ -71,9 +68,8 @@ echo Info: Checking for a partition appropriate for Data ...
 
 if [ `blkid | grep Data | cut -d"\"" -f2` == "Data" ]
   then
-    echo Info: Found Entware partition on `blkid | grep Data | cut -d":" -f1`
+    echo Info: Found Data partition on `blkid | grep Data | cut -d":" -f1`
     echo Info: Writing mount point for `blkid | grep Data | cut -d":" -f1` in fstab
-#    echo "/dev/discs/disca/part1  /opt            ext3    rw,noatime      1       1" >> /etc/fstab
     echo "UUID="`blkid | grep Data | cut -d"\"" -f4`"  /mnt      ext3    rw,noatime 1       1" >> /etc/fstab
 else
     warning "Partition not found for Data installation. Installation will nevertheless continue."
@@ -93,13 +89,13 @@ fi
 
 
 echo Info: Making fstab persitent in flashfs ...
-if [ -e "/usr/local/.files"]
+if [ -e "/usr/local/.files" ]
 then
     info "Removing  /usr/local/.files"
     rm  /usr/local/.files
 fi
-echo "/etc/fstab" >> /usr/local/.files
-persistflash
+# echo "/etc/fstab" >> /usr/local/.files
+# persistflash
 
 echo Info: Configuring startup and shutdown scripts...
 clear_startup_shutdown_scripts
@@ -108,8 +104,8 @@ touch /usr/local/sbin/post-mount
 touch /usr/local/sbin/pre-shutdown
 chmod +x /usr/local/sbin/*
 
-echo Info: saving in flashfs ...
-persistflash
+# echo Info: saving in flashfs ...
+# persistflash
 
 echo Info: Configuring post-mount script ...
 echo "#! /bin/sh" >> /usr/local/sbin/post-mount
@@ -133,7 +129,7 @@ mount -a
 
 # install entware
 # call entware script here or in main script
-echo Info: Your router will now reboot ...
+# echo Info: Your router will now reboot ...
 # sleep 3s
 # reboot
 
