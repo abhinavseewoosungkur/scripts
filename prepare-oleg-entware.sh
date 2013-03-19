@@ -94,8 +94,8 @@ then
     info "Removing  /usr/local/.files"
     rm  /usr/local/.files
 fi
-# echo "/etc/fstab" >> /usr/local/.files
-# persistflash
+echo "/etc/fstab" >> /usr/local/.files
+persistflash
 
 echo Info: Configuring startup and shutdown scripts...
 clear_startup_shutdown_scripts
@@ -104,8 +104,8 @@ touch /usr/local/sbin/post-mount
 touch /usr/local/sbin/pre-shutdown
 chmod +x /usr/local/sbin/*
 
-# echo Info: saving in flashfs ...
-# persistflash
+echo Info: saving in flashfs ...
+persistflash
 
 echo Info: Configuring post-mount script ...
 echo "#! /bin/sh" >> /usr/local/sbin/post-mount
