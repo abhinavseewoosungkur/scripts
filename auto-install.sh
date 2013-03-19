@@ -16,9 +16,10 @@ info() {
     echo -e "Info: $1"
 }
 
+# arg1 the drive path: /dev/sda
 # returns the drive size
 drive_size() {
-    echo `fdisk -l | grep 'Disk $1' | cut -d" " -f3,4 | cut -d"," -f1`
+    echo `fdisk -l | grep "Disk $1" | cut -d" " -f3,4 | cut -d"," -f1`
 }
 
 # arg1 partition number
@@ -67,7 +68,7 @@ echo Info: Looking for connected drives ...
 for drive in `fdisk -l | grep Disk | cut -d" " -f2 | cut -d":" -f1` # look for connected drives in router
 do
     driveFound="true" # flag as true for script flow condition
-    echo "[$driveCount] -->" $drive # show user corresponding number for drive to choose
+    echo "[$driveCount] -->" $drive "("`drive_size $drive`")" # show user corresponding number for drive to choose
     eval drives$driveCount=$drive # simulate array: drives1=/dev/sda, drives2=/dev/sdb
     driveCount=`expr $driveCount + 1` # increment value of i
 done
@@ -93,7 +94,7 @@ fi
 
 # Ask user for confirmation before proceeding with format
 eval chosenDrive=\$drives$driveNumber
-warning "You have chosen drive $chosenDrive to be formatted. Press y to continue or n to abort installation."
+warning "You have chosen drive $chosenDrive having size `drive_size $chosenDrive` to be formatted. Press y to continue or n to abort installation."
 read userConfirmation
 if [ $userConfirmation == "n" ]
 then
@@ -107,8 +108,6 @@ info "2. /mnt"
 info "3. swap"
 
 
-info "The drive has a capacity of " 
-drive_size $chosenDrive
 info "Auto partition will now proceed. Leave enough space for swap. A space equivalent to your ram size will be enough for swap."
 warning "Write the unit type after the size without spaces. Example: 128M or 4G"
 info "How much space would you like to allocate for the swap?"
@@ -208,6 +207,7 @@ fi
 # When partitions have been formatted, call prepare-oleg-entware script
 cd /tmp
 wget --no-check-certificate https://github.com/abhinavseewoosungkur/scripts/blob/develop/prepare-oleg-entware.sh
+# wget http://entware-test.googlecode.com/files/prepare-oleg-entware.sh
 sh ./prepare-oleg-entware.sh
 
 cd /opt
