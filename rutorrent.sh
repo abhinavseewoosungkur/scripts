@@ -1,3 +1,5 @@
+# Definitions
+lighttpdrc=/opt/etc/lighttpd/lighttpd.conf
 
 # Text formatters
 warning() {
@@ -24,11 +26,43 @@ setRtorrentConfig() {
     sed -i "s/#$1.*/$1 = $escaped/g" /opt/etc/rtorrent.conf
 }
 
+# configures the lighttpd rc file
+# arg1 The key
+# arg2 The value
+setLighttpdConfig() {
+    escaped=`escapeSlash $2`
+    sed -i "s/#$1.*/$1 = $escaped/g" /opt/etc/lighttpd/lighttpd.conf
+}
+
 # escapes slashes
 # arg1 The string to escape
 escapeSlash() {
     echo $1 | sed 's/\//\\\//g'
 }
+
+# add line after block of code
+# arg1 block start expression
+# arg2 Line to add
+# arg3 File to process
+addLineAfterBlock() {
+    sed -e "/$1/{:a;n;/^$/!ba;i\$2' -e '}" -i $3
+}
+
+# uncomment configuration
+# arg1 The configuration
+# arg2 the filename
+uncomment() {
+    sed "/${1}/ s/# *//" -i $2
+}
+
+# comment configuration
+# arg1 The configuration
+# arg2 the filename
+
+comment() {
+    sed "/${1}/ s/^/# /" -i $2 
+}
+
 
 # read the rtorrent work directory
 echo -n `info "Enter the work directory for rtorrent or press Enter to use /mnt/rtorrent/work: "` 
@@ -54,13 +88,21 @@ then
     port_range=51777-51780
 fi
 
+# read lighttpd port
+echo -n `info "Enter the port for lighttpd or press Enter to use 8010: "`
+read lighttpd_port
+if [ -n $lighttpd_port ]
+then
+    lighttpd_port=8010
+fi
+
+
 info "Checking presence of Entware ..."
 if [ "`which opkg`" == "" ] 
 then
     warning "Entware not installed."
     info "Proceeding with Entware installation ..."
-    wget http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh
-    sh entware_install.sh
+    wget http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh entware_install.sh
 else
     info "Great! Entware found"
 fi
@@ -77,6 +119,7 @@ opkg update
 #     exit 1
 # fi
 
+info "Installing rtorrent and its dependencies ..."
 opkg install rtorrent screen dtach
 
 info "Making sure /opt/etc exists before proceeding ..."
@@ -97,7 +140,76 @@ setRtorrentConfig directory $work
 setRtorrentConfig session $session
 setRtorrentConfig port_range $port_range
 
-# scgi configuration
+# scgi configuration.
 echo "scgi_port = 127.0.0.1:5000" >> /opt/etc/rtorrent.conf
 
 info "rtorrent installed."
+
+info "Now installing lighttpd ..."
+opkg install lighttpd lighttpd-mod-fastcgi lighttpd-mod-scgi
+
+# Add mod_scgi and mod_fastcgi modules
+# Look for the server.modules block of code and insert the 2 modules after
+# it
+info "Adding server modules ..."
+sed -e '/#server.modules = (/{:a;n;/^$/!ba;i\server.modules += ( "mod_scgi" )' -e '}' -i /opt/etc/lighttpd/lighttpd.conf
+sed -e '/#server.modules = (/{:a;n;/^$/!ba;i\server.modules += ( "mod_fastcgi" )' -e '}' -i /opt/etc/lighttpd/lighttpd.conf
+
+info "Enabling logging for lighttpd ..."
+uncomment server.errorlog $lighttpdrc
+
+info "Setting server.port to $lighttpd_port"
+setLighttpdConfig server.port 8010
+
+info "Adding scgi.server config"
+echo "scgi.server = (" >> $lighttpdrc
+echo "        \"/RPC2\" =>" >> $lighttpdrc
+echo "               ( \"127.0.0.1\" =>"  >> $lighttpdrc
+echo "                        (" >> $lighttpdrc
+echo "                                \"host\" => \"127.0.0.1\"",  >> $lighttpdrc
+echo "                                \"port\" => 5000," >> $lighttpdrc
+echo "                                \"check-local\" => \"disable\"" >> $lighttpdrc
+echo "                        )" >> $lighttpdrc
+echo "                )" >> $lighttpdrc
+echo "        )" >> $lighttpdrc
+
+info "Adding fastcfgi.server config"
+echo "fastcgi.server             = ( \".php\" =>" >> $lighttpdrc
+echo "                               ( \"localhost\" =>" >> $lighttpdrc
+echo "                                 (" >> $lighttpdrc
+echo "                                   \"socket\" => \"/tmp/php-fastcgi.socket\"," >> $lighttpdrc
+echo "                                  \"bin-path\" => \"/opt/bin/php-fcgi\"" >> $lighttpdrc
+echo "                                 )" >> $lighttpdrc
+echo "                               )" >> $lighttpdrc
+echo "                            )" >> $lighttpdrc
+
+
+info "Installing php5-cli and php5-fastcgi"
+opkg install php5-cli
+opkg install php5-fastcgi
+
+info "Fixing php link ..."
+cd /opt/bin
+ln -s php-cli php
+
+info "Restarting the lighttpd server ..."
+/opt/etc/init.d/S80lighttpd restart
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### References ####
+# http://www.unix.com/shell-programming-scripting/158109-uncomment-comment-one-specific-line-config-file.html
