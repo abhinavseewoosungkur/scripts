@@ -1,5 +1,6 @@
 # Definitions
 lighttpdrc=/opt/etc/lighttpd/lighttpd.conf
+rtorrentservice=/opt/etc/init.d/S99rtorrent
 
 # Text formatters
 warning() {
@@ -225,10 +226,37 @@ uncommentPHP "$scgi_port = 5000" /opt/share/www/rutorrent/conf/config.php
 uncommentPHP "$scgi_host = \"127" /opt/share/www/rutorrent/conf/config.php
 
 
+info "Deploying the rtorrent service script ..."
+info "Removing script if existent"
 
+if [ -f $rtorrentservice ]
+then
+    info "Removing script"
+    rm $rtorrentservice
+fi
+info "Deploying ..."
+echo "#!/bin/sh" >> $rtorrentservice
+echo "ENABLED=yes" >> $rtorrentservice
+echo "PROCS=screen" >> $rtorrentservice
+echo "ARGS=\"-dm -S rtorrent rtorrent -n -o import=/opt/etc/rtorrent.conf\"" >> $rtorrentservice
+echo "PREARGS=\"\"" >> $rtorrentservice
+echo "DESC=$PROCS" >> $rtorrentservice
+echo "PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> $rtorrentservice
+echo ". /opt/etc/init.d/rc.func" >> $rtorrentservice
 
+info "Deployment done."
 
+info "Making sript executable ..."
+chmod +x $rtorrentservice
 
+info "Starting rtorrent ..."
+/opt/etc/init.d/S99rtorrent start
+
+info "Restarting lighttpd ..."
+/opt/etc/init.d/S80lighttpd restart
+
+warning "Check your rutorrent before proceeding. Press Enter to continue"
+read rutorrentcheck
 
 
 
