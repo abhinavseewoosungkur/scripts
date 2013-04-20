@@ -49,7 +49,7 @@ addLineAfterBlock() {
 }
 
 # uncomment configuration
-# arg1 The configuration
+# arg1 The configuration regexp
 # arg2 the filename
 uncomment() {
     sed "/${1}/ s/# *//" -i $2
@@ -61,6 +61,21 @@ uncomment() {
 
 comment() {
     sed "/${1}/ s/^/# /" -i $2 
+}
+
+# uncomment configuration
+# arg1 The configuration regexp
+# arg2 the filename
+uncommentPHP() {
+    sed "/${1}/ s/\/\/ *//" -i $2
+}
+
+# comment configuration
+# arg1 The configuration
+# arg2 the filename
+
+commentPHP() {
+    sed "/${1}/ s/^/\/\/ /" -i $2 
 }
 
 
@@ -102,7 +117,7 @@ if [ "`which opkg`" == "" ]
 then
     warning "Entware not installed."
     info "Proceeding with Entware installation ..."
-    wget http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh entware_install.sh
+    wget -O - http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh
 else
     info "Great! Entware found"
 fi
@@ -195,9 +210,19 @@ ln -s php-cli php
 info "Restarting the lighttpd server ..."
 /opt/etc/init.d/S80lighttpd restart
 
+info "Installing more rutorrent dependencies ..."
+opkg install php5-mod-json curl
+
+info "Now ready to install rutorrent ..."
+opkg install rutorrent
 
 
+info "Use port instead of socket for rutorrent"
+commentPHP "$scgi_port = 0" /opt/share/www/rutorrent/conf/config.php
+commentPHP "$scgi_host = \"unix" /opt/share/www/rutorrent/conf/config.php
 
+uncommentPHP "$scgi_port = 5000" /opt/share/www/rutorrent/conf/config.php
+uncommentPHP "$scgi_host = \"127" /opt/share/www/rutorrent/conf/config.php
 
 
 
