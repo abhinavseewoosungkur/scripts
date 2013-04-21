@@ -81,6 +81,13 @@ commentPHP() {
     sed "/${1}/ s/^/\/\/ /" -i $2 
 }
 
+installrutorrentplugins() {
+    for plugin in `opkg list | grep rutorrent-plugin | awk '{print $1}'`
+    do
+	opkg install $plugin
+    done
+}
+
 
 # read the rtorrent work directory
 echo -n `info "Work directory for rtorrent [ /mnt/rtorrent/work ]: "` 
@@ -303,6 +310,18 @@ info "Restarting the cron service ..."
 /opt/etc/init.d/S10cron restart
 
 
+info "rtorrent / rutorrent ready to download. "
+info "Navigate to http://routerip:$lighttpd_port/rutorrent to verify installation."
+info "Press Enter to continue"
+read continue
+
+success "Congratulations! You now have an awesome torrent server on your router."
+info "Ready to supercharge rutorrent with all the plugins? [ y ] :"
+read installpluginsprompt
+if [ -n $installpluginsprompt ]
+then
+    installrutorrentplugins
+fi
 
 
 #### References ####
