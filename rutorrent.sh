@@ -1,4 +1,5 @@
 # Definitions
+rtorrentrc=/opt/etc/rtorrent.conf
 lighttpdrc=/opt/etc/lighttpd/lighttpd.conf
 rtorrentservice=/opt/etc/init.d/S99rtorrent
 rtorrentreviver=/opt/etc/rtorrentreviver
@@ -82,7 +83,7 @@ commentPHP() {
 
 
 # read the rtorrent work directory
-echo -n `info "Enter the work directory for rtorrent or press Enter to use /mnt/rtorrent/work: "` 
+echo -n `info "Work directory for rtorrent [ /mnt/rtorrent/work ]: "` 
 read work
 if [ -n $work ]
 then 
@@ -90,7 +91,7 @@ then
 fi
 
 # read the rtorrent session directory
-echo -n `info "Enter the session directory for rtorrent or press Enter to use /mnt/rtorrent/session: "`
+echo -n `info "Session directory for rtorrent [ /mnt/rtorrent/session ]: "`
 read session
 if [ -n $session ] 
 then
@@ -98,15 +99,23 @@ then
 fi
 
 # read the rtorrent port range
-echo -n `info "Enter the port range for rtorrent or press Enter to use 51777-51780: "`
+echo -n `info "Port range for rtorrent [ 51777-51780 ]: "`
 read port_range
 if [ -n $port_range ]
 then
     port_range=51777-51780
 fi
 
+# read the rtorrent port range
+echo -n `info "DHT Port for rtorrent [ 6881 ]: "`
+read dhtport
+if [ -n $dhtport ]
+then
+    dhtport=6881
+fi
+
 # read lighttpd port
-echo -n `info "Enter the port for lighttpd or press Enter to use 8010: "`
+echo -n `info "Port for lighttpd [ 8010 ]: "`
 read lighttpd_port
 if [ -n $lighttpd_port ]
 then
@@ -156,6 +165,19 @@ info "Proceeding with rtorrent configuration ..."
 setRtorrentConfig directory $work
 setRtorrentConfig session $session
 setRtorrentConfig port_range $port_range
+setRtorrentConfig dht_port $dhtport
+uncomment dht $rtorrentrc
+uncomment min_peers $rtorrentrc
+uncomment max_peers $rtorrentrc
+uncomment min_peers_seed $rtorrentrc
+uncomment max_peers_seed $rtorrentrc
+uncomment max_uploads $rtorrentrc
+uncomment download_rate $rtorrentrc
+uncomment upload_rate $rtorrentrc
+uncomment check_hash $rtorrentrc
+uncomment use_udp_trackers $rtorrentrc
+uncomment peer_exchange $rtorrentrc
+uncomment max_memory_usage $rtorrentrc
 
 # scgi configuration.
 echo "scgi_port = 127.0.0.1:5000" >> /opt/etc/rtorrent.conf
@@ -212,7 +234,7 @@ ln -s php-cli php
 info "Restarting the lighttpd server ..."
 /opt/etc/init.d/S80lighttpd restart
 
-info "Installing more rutorrent dependencies ..."
+info "Installing rutorrent dependencies ..."
 opkg install php5-mod-json curl
 
 info "Now ready to install rutorrent ..."
