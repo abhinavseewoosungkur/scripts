@@ -1,6 +1,7 @@
 # Definitions
 lighttpdrc=/opt/etc/lighttpd/lighttpd.conf
 rtorrentservice=/opt/etc/init.d/S99rtorrent
+rtorrentreviver=/opt/etc/rtorrentreviver
 
 # Text formatters
 warning() {
@@ -249,17 +250,35 @@ info "Deployment done."
 info "Making sript executable ..."
 chmod +x $rtorrentservice
 
-info "Starting rtorrent ..."
-/opt/etc/init.d/S99rtorrent start
+info "Restarting rtorrent ..."
+/opt/etc/init.d/S99rtorrent restart
 
 info "Restarting lighttpd ..."
 /opt/etc/init.d/S80lighttpd restart
 
 warning "Check your rutorrent before proceeding. Press Enter to continue"
-read rutorrentcheck
+# read rutorrentcheck
 
 
+info "Installing rtorrent WatchDog ..."
+info "Deploying the reviver script ..."
+echo "#!/bin/sh" >> $rtorrentreviver
+echo "if [ \`/opt/etc/init.d/S99rtorrent check | awk '{print \$5}'\` = \"dead.\"  ] ; then" >> $rtorrentreviver
+echo "        if [ -e  $session/rtorrent.lock ] ; then" >> $rtorrentreviver
+echo "                rm  $session/rtorrent.lock" >> $rtorrentreviver
+echo "        fi" >> $rtorrentreviver
+echo "        /opt/etc/init.d/S99rtorrent start" >> $rtorrentreviver
+echo "        echo \"restarted failed rtorrent on \" \`date\` >> /opt/var/log/rtorrent.log" >> $rtorrentreviver
+echo "fi" >> $rtorrentreviver
 
+info "Making script executable ..."
+chmod +x $rtorrentreviver
+
+info "Installing cron ..."
+opkg install cron
+mv /opt/etc/rtorrentreviver /opt/etc/cron.1min/
+info "Restarting the cron service ..."
+/opt/etc/init.d/S10cron restart
 
 
 
