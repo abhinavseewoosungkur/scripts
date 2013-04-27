@@ -357,8 +357,7 @@ prompt "Ready to supercharge rutorrent with all the plugins? [ y ] :"
 read installpluginsprompt
 if [[ "$installpluginsprompt" == "" ]]
 then
-    # installrutorrentplugins
-    opkg install rutorrent-plugin-diskspace
+    installrutorrentplugins
     fixdiskpaceplugin
 fi
 
