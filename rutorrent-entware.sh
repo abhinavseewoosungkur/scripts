@@ -1,3 +1,6 @@
+# Author: Abhinav Seewoosungkur
+
+
 # Definitions
 rtorrentrc=/opt/etc/rtorrent.conf
 lighttpdrc=/opt/etc/lighttpd/lighttpd.conf
@@ -5,28 +8,40 @@ rtorrentservice=/opt/etc/init.d/S99rtorrent
 rtorrentreviver=/opt/etc/rtorrentreviver
 
 # Text formatters
+# Yellow
 warning() {
     echo -e "\033[33mWarning: $1\033[0m"
 }
 
+# Red
 error() {
     echo -e "\033[31mError: $1\033[0m"
 }
 
+# Green
 success() {
     echo -e "\033[32mSuccess: $1\033[0m"
 }
 
+# Cyan
 info() {
-    echo -e "\033[34mInfo: $1\033[0m"
+    echo -e "\033[36mInfo: $1\033[0m"
 }
+
+# Magenta
+# arg1 The string to format
+# arg2 Text Modifier
+prompt() {
+    echo -e "\033[$2;35mPrompt: $1\033[0m"
+}
+
 
 # configures the rtorrent rc file
 # arg1 The key
 # arg2 The value
 setRtorrentConfig() {
     escaped=`escapeSlash $2`
-    sed -i "s/#$1.*/$1 = $escaped/g" /opt/etc/rtorrent.conf
+    sed -i "s/.*$1 =.*/$1 = $escaped/g" /opt/etc/rtorrent.conf
 }
 
 # configures the lighttpd rc file
@@ -51,14 +66,14 @@ addLineAfterBlock() {
     sed -e "/$1/{:a;n;/^$/!ba;i\$2' -e '}" -i $3
 }
 
-# uncomment configuration
+# uncomment shell configuration
 # arg1 The configuration regexp
 # arg2 the filename
 uncomment() {
     sed "/${1}/ s/# *//" -i $2
 }
 
-# comment configuration
+# comment shell configuration
 # arg1 The configuration
 # arg2 the filename
 
@@ -66,14 +81,14 @@ comment() {
     sed "/${1}/ s/^/# /" -i $2 
 }
 
-# uncomment configuration
+# uncomment PHP configuration
 # arg1 The configuration regexp
 # arg2 the filename
 uncommentPHP() {
     sed "/${1}/ s/\/\/ *//" -i $2
 }
 
-# comment configuration
+# comment PHP configuration
 # arg1 The configuration
 # arg2 the filename
 
@@ -81,6 +96,7 @@ commentPHP() {
     sed "/${1}/ s/^/\/\/ /" -i $2 
 }
 
+# install all rutorrent plugins available when script is executed
 installrutorrentplugins() {
     for plugin in `opkg list | grep rutorrent-plugin | awk '{print $1}'`
     do
@@ -88,43 +104,54 @@ installrutorrentplugins() {
     done
 }
 
+# fix the rutorrent diskspace plugin by changing
+# the specified rtorrent work directory
+fixdiskpaceplugin() {
+if [ -f /opt/share/www/rutorrent/plugins/diskspace/action.php ]
+then
+    escaped=`escapeSlash "$work"`
+    sed -i "s/\$topDirectory/\"$escaped\"/g" /opt/share/www/rutorrent/plugins/diskspace/action.php
+fi
+/opt/etc/init.d/S80lighttpd restart
+}
+
 
 # read the rtorrent work directory
-echo -n `info "Work directory for rtorrent [ /mnt/rtorrent/work ]: "` 
+echo -n `prompt "Work directory for rtorrent [ /mnt/rtorrent/work ]: "` 
 read work
-if [ -n $work ]
+if [[ "$work" == "" ]]
 then 
     work=/mnt/rtorrent/work
 fi
 
 # read the rtorrent session directory
-echo -n `info "Session directory for rtorrent [ /mnt/rtorrent/session ]: "`
+echo -n `prompt "Session directory for rtorrent [ /mnt/rtorrent/session ]: "`
 read session
-if [ -n $session ] 
+if [[ "$session" == "" ]] 
 then
     session=/mnt/rtorrent/session
 fi
 
 # read the rtorrent port range
-echo -n `info "Port range for rtorrent [ 51777-51780 ]: "`
+echo -n `prompt "Port range for rtorrent [ 51777-51780 ]: "`
 read port_range
-if [ -n $port_range ]
+if [[ "$port_range" == "" ]]
 then
     port_range=51777-51780
 fi
 
-# read the rtorrent port range
-echo -n `info "DHT Port for rtorrent [ 6881 ]: "`
+# read the rtorrent DHT port
+echo -n `prompt "DHT Port for rtorrent [ 6881 ]: "`
 read dhtport
-if [ -n $dhtport ]
+if [[ "$dhtport" == "" ]]
 then
     dhtport=6881
 fi
 
 # read lighttpd port
-echo -n `info "Port for lighttpd [ 8010 ]: "`
+echo -n `prompt "Port for lighttpd [ 8010 ]: "`
 read lighttpd_port
-if [ -n $lighttpd_port ]
+if [[ "$lighttpd_port" == "" ]]
 then
     lighttpd_port=8010
 fi
@@ -205,7 +232,7 @@ info "Enabling logging for lighttpd ..."
 uncomment server.errorlog $lighttpdrc
 
 info "Setting server.port to $lighttpd_port"
-setLighttpdConfig server.port 8010
+setLighttpdConfig server.port $lighttpd_port
 
 info "Adding scgi.server config"
 echo "scgi.server = (" >> $lighttpdrc
@@ -306,21 +333,33 @@ chmod +x $rtorrentreviver
 info "Installing cron ..."
 opkg install cron
 mv /opt/etc/rtorrentreviver /opt/etc/cron.1min/
+
+info "Fixing cron username"
+# check if id exists
+if [ "`which id`" == ""  ]
+then 
+    opkg install coreutils-id
+fi
+username=`id -u -n`
+sed -i "s/root \//$username \//g" /opt/etc/crontab 
+
 info "Restarting the cron service ..."
 /opt/etc/init.d/S10cron restart
 
 
 info "rtorrent / rutorrent ready to download. "
-info "Navigate to http://routerip:$lighttpd_port/rutorrent to verify installation."
-info "Press Enter to continue"
+prompt "Navigate to http://routerip:$lighttpd_port/rutorrent to verify installation."
+prompt "Press Enter to continue" 5
 read continue
 
 success "Congratulations! You now have an awesome torrent server on your router."
-info "Ready to supercharge rutorrent with all the plugins? [ y ] :"
+prompt "Ready to supercharge rutorrent with all the plugins? [ y ] :"
 read installpluginsprompt
-if [ -n $installpluginsprompt ]
+if [[ "$installpluginsprompt" == "" ]]
 then
-    installrutorrentplugins
+    # installrutorrentplugins
+    opkg install rutorrent-plugin-diskspace
+    fixdiskpaceplugin
 fi
 
 
