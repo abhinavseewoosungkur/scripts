@@ -272,9 +272,11 @@ info "Installing php5-cli and php5-fastcgi"
 opkg install php5-cli
 opkg install php5-fastcgi
 
-info "Fixing php link ..."
-cd /opt/bin
-ln -s php-cli php
+# info "Fixing php link ..."
+# cd /opt/bin
+# ln -s php-cli php
+
+
 
 info "Restarting the lighttpd server ..."
 /opt/etc/init.d/S80lighttpd restart
@@ -285,6 +287,8 @@ opkg install php5-mod-json curl
 info "Now ready to install rutorrent ..."
 opkg install rutorrent
 
+# Specify php path in rutorrent config
+sed -i "s/\"php\".*''/\"php\"  => '\/opt\/bin\/php-cli'/g" /opt/share/www/rutorrent/conf/config.php
 
 info "Use port instead of socket for rutorrent"
 commentPHP "$scgi_port = 0" /opt/share/www/rutorrent/conf/config.php
@@ -322,10 +326,6 @@ info "Restarting rtorrent ..."
 
 info "Restarting lighttpd ..."
 /opt/etc/init.d/S80lighttpd restart
-
-warning "Check your rutorrent before proceeding. Press Enter to continue"
-# read rutorrentcheck
-
 
 info "Installing rtorrent WatchDog ..."
 info "Deploying the reviver script ..."
