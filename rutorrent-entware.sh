@@ -35,6 +35,34 @@ prompt() {
     echo -e "\033[$2;35mPrompt: $1\033[0m"
 }
 
+# escapes slashes
+# arg1 The string to escape
+escapeSlash() {
+    echo $1 | sed 's/\//\\\//g'
+}
+
+# Check if Entware is present on the router. 
+# If not, prompt for installation and update the repo.
+checkEntware() {
+    info "Checking presence of Entware ..."
+    if [ "`which opkg`" == "" ] 
+    then
+	warning "Entware not installed."
+	echo -n `prompt "Entware is needed to install rutorrent / rtorrent. Proceed with Entware installation? [ y ]"`
+	read installentware
+	if [[ "$installentware" == "" ]]
+	then
+	    wget -O - http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh
+	else
+	    exit 1
+	fi
+    else
+	info "Great! Entware found"
+    fi
+
+    info "Updating the Entware repository ..."
+    opkg update
+}
 
 # configures the rtorrent rc file
 # arg1 The key
@@ -50,12 +78,6 @@ setRtorrentConfig() {
 setLighttpdConfig() {
     escaped=`escapeSlash $2`
     sed -i "s/#$1.*/$1 = $escaped/g" /opt/etc/lighttpd/lighttpd.conf
-}
-
-# escapes slashes
-# arg1 The string to escape
-escapeSlash() {
-    echo $1 | sed 's/\//\\\//g'
 }
 
 # add line after block of code
@@ -115,6 +137,8 @@ fi
 /opt/etc/init.d/S80lighttpd restart
 }
 
+# Check for the presence of Entware before proceeding
+checkEntware
 
 # read the rtorrent work directory
 echo -n `prompt "Work directory for rtorrent [ /mnt/rtorrent/work ]: "` 
@@ -124,13 +148,14 @@ then
     work=/mnt/rtorrent/work
 fi
 
-# read the rtorrent session directory
-echo -n `prompt "Session directory for rtorrent [ /mnt/rtorrent/session ]: "`
-read session
-if [[ "$session" == "" ]] 
-then
-    session=/mnt/rtorrent/session
-fi
+# # read the rtorrent session directory
+# echo -n `prompt "Session directory for rtorrent [ /mnt/rtorrent/session ]: "`
+# read session
+# if [[ "$session" == "" ]] 
+# then
+#     session=/mnt/rtorrent/session
+# fi
+session=/opt/etc/rtorrent/session
 
 # read the rtorrent port range
 echo -n `prompt "Port range for rtorrent [ 51777-51780 ]: "`
@@ -155,20 +180,6 @@ if [[ "$lighttpd_port" == "" ]]
 then
     lighttpd_port=8010
 fi
-
-
-info "Checking presence of Entware ..."
-if [ "`which opkg`" == "" ] 
-then
-    warning "Entware not installed."
-    info "Proceeding with Entware installation ..."
-    wget -O - http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh
-else
-    info "Great! Entware found"
-fi
-
-info "Updating the Entware repository ..."
-opkg update
 
 # enable this after script dev is finished
 # if [ "`which rtorrent`" !=  "" ]
