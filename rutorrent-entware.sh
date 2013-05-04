@@ -225,8 +225,8 @@ uncomment peer_exchange $rtorrentrc
 uncomment max_memory_usage $rtorrentrc
 
 # scgi configuration.
-echo "scgi_port = 127.0.0.1:5000" >> /opt/etc/rtorrent.conf
-
+# echo "scgi_port = 127.0.0.1:5000" >> /opt/etc/rtorrent.conf
+echo "scgi_local = /opt/var/rpc.socket" >> /opt/etc/rtorrent.conf
 info "rtorrent installed."
 
 info "Now installing lighttpd ..."
@@ -250,8 +250,9 @@ echo "scgi.server = (" >> $lighttpdrc
 echo "        \"/RPC2\" =>" >> $lighttpdrc
 echo "               ( \"127.0.0.1\" =>"  >> $lighttpdrc
 echo "                        (" >> $lighttpdrc
-echo "                                \"host\" => \"127.0.0.1\"",  >> $lighttpdrc
-echo "                                \"port\" => 5000," >> $lighttpdrc
+# echo "                                \"host\" => \"127.0.0.1\"",  >> $lighttpdrc
+# echo "                                \"port\" => 5000," >> $lighttpdrc
+echo "                                \"socket\" => \"/opt/var/rpc.socket\"," >> $lighttpdrc
 echo "                                \"check-local\" => \"disable\"" >> $lighttpdrc
 echo "                        )" >> $lighttpdrc
 echo "                )" >> $lighttpdrc
@@ -290,12 +291,12 @@ opkg install rutorrent
 # Specify php path in rutorrent config
 sed -i "s/\"php\".*''/\"php\"  => '\/opt\/bin\/php-cli'/g" /opt/share/www/rutorrent/conf/config.php
 
-info "Use port instead of socket for rutorrent"
-commentPHP "$scgi_port = 0" /opt/share/www/rutorrent/conf/config.php
-commentPHP "$scgi_host = \"unix" /opt/share/www/rutorrent/conf/config.php
+# info "Use port instead of socket for rutorrent"
+# commentPHP "$scgi_port = 0" /opt/share/www/rutorrent/conf/config.php
+# commentPHP "$scgi_host = \"unix" /opt/share/www/rutorrent/conf/config.php
 
-uncommentPHP "$scgi_port = 5000" /opt/share/www/rutorrent/conf/config.php
-uncommentPHP "$scgi_host = \"127" /opt/share/www/rutorrent/conf/config.php
+# uncommentPHP "$scgi_port = 5000" /opt/share/www/rutorrent/conf/config.php
+# uncommentPHP "$scgi_host = \"127" /opt/share/www/rutorrent/conf/config.php
 
 
 info "Deploying the rtorrent service script ..."
