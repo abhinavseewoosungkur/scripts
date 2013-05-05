@@ -310,11 +310,14 @@ fi
 info "Deploying ..."
 echo "#!/bin/sh" >> $rtorrentservice
 echo "ENABLED=yes" >> $rtorrentservice
-echo "PROCS=screen" >> $rtorrentservice
-echo "ARGS=\"-dm -S rtorrent rtorrent -n -o import=/opt/etc/rtorrent.conf\"" >> $rtorrentservice
-echo "PREARGS=\"\"" >> $rtorrentservice
-echo "DESC=$PROCS" >> $rtorrentservice
+echo "PROCS=rtorrent" >> $rtorrentservice
+echo "ARGS=\"-n -o import=/opt/etc/rtorrent.conf\"" >> $rtorrentservice
+echo "PREARGS=\"screen -dmS rtorrent\"" >> $rtorrentservice
+echo "DESC=\$PROCS" >> $rtorrentservice
 echo "PATH=/opt/sbin:/opt/bin:/opt/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> $rtorrentservice
+echo "if [ -z \"\`pidof \$PROCS\`\" ]; then" >> $rtorrentservice
+echo "    rm -f /opt/var/rpc.socket" >> $rtorrentservice
+echo "fi" >> $rtorrentservice
 echo ". /opt/etc/init.d/rc.func" >> $rtorrentservice
 
 info "Deployment done."
@@ -322,11 +325,12 @@ info "Deployment done."
 info "Making sript executable ..."
 chmod +x $rtorrentservice
 
+info "Restarting lighttpd ..."
+/opt/etc/init.d/S80lighttpd restart
+
 info "Restarting rtorrent ..."
 /opt/etc/init.d/S99rtorrent restart
 
-info "Restarting lighttpd ..."
-/opt/etc/init.d/S80lighttpd restart
 
 info "Installing rtorrent WatchDog ..."
 info "Deploying the reviver script ..."
