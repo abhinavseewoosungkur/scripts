@@ -137,6 +137,45 @@ fi
 /opt/etc/init.d/S80lighttpd restart
 }
 
+# Password protect rutorrent
+passwordProtectRutorrent() {
+    echo -n `prompt "Password protect rutorrent? [ y ]:"`
+    read rutorrentpasswordprompt
+    if [[ "$rutorrentpasswordprompt" == "" ]]
+    then
+	echo -n `prompt "rutorrent username [ admin ]: " `
+	read rutorrentUsername
+	if [[ "$rutorrentUsername" == "" ]]
+	then
+	    rutorrentUsername=admin
+	fi
+
+	echo -n `prompt "rutorrent password [ password ]: "`
+	read rutorrentPassword
+	if [[ "$rutorrentPassword" == "" ]]
+	then
+	    rutorrentPassword=password
+	fi
+
+	opkg install lighttpd-mod-auth
+
+	echo $rutorrentUsername:$rutorrentPassword >> /opt/etc/lighttpd/passwd
+	
+	echo "server.modules += ( \"mod_auth\" )" >> $lighttpdrc
+	echo "auth.backend = \"plain\"" >> $lighttpdrc
+	echo "auth.backend.plain.userfile = \"/opt/etc/lighttpd/passwd\"" >> $lighttpdrc 
+	echo "auth.require = (" >> $lighttpdrc
+	echo "    \"/rutorrent/\" =>" >> $lighttpdrc
+	echo "    ( \"method\"  => \"basic\"," >> $lighttpdrc
+	echo "	\"realm\"   => \"restricted area\"," >> $lighttpdrc
+	echo "	\"require\" => \"valid-user\"" >> $lighttpdrc
+	echo "   )" >> $lighttpdrc
+	echo ")" >> $lighttpdrc
+
+	/opt/etc/init.d/S80lighttpd restart
+    fi	
+}
+
 # Check for the presence of Entware before proceeding
 checkEntware
 
@@ -377,6 +416,8 @@ then
     fixdiskpaceplugin
 fi
 
+passwordProtectRutorrent
 
 #### References ####
 # http://www.unix.com/shell-programming-scripting/158109-uncomment-comment-one-specific-line-config-file.html
+# http://wl500g.info/showthread.php?30002&highlight=rtorrent
