@@ -48,10 +48,14 @@ checkEntware() {
     if [ "`which opkg`" == "" ] 
     then
 	warning "Entware not installed."
-	echo -n `prompt "Entware is needed to install rutorrent / rtorrent. Proceed with Entware installation? [ y ]"`
-	read installentware
-	if [[ "$installentware" == "" ]]
+	if [ $quickinstall == false ] 
 	then
+	    echo -n `prompt "Entware is needed to install rutorrent / rtorrent. Proceed with Entware installation? [ y ]"`
+	    read installentware
+	fi
+	if [[ "$installentware" == "" ]] || [ $quickinstall == true ]
+	then
+	    info "Installing Entware ..."
 	    wget -O - http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh
 	else
 	    exit 1
@@ -139,20 +143,30 @@ fi
 
 # Password protect rutorrent
 passwordProtectRutorrent() {
-    echo -n `prompt "Password protect rutorrent? [ y ]:"`
-    read rutorrentpasswordprompt
-    if [[ "$rutorrentpasswordprompt" == "" ]]
+    if [ $quickinstall == false ]
     then
-	echo -n `prompt "rutorrent username [ admin ]: " `
-	read rutorrentUsername
-	if [[ "$rutorrentUsername" == "" ]]
+	echo -n `prompt "Password protect rutorrent? [ y ]:"`
+	read rutorrentpasswordprompt
+    fi
+    if [[ "$rutorrentpasswordprompt" == "" ]] || [ $rutorrentpasswordprompt == y  ] || [ $quickinstall == true ]
+    then
+	
+	if [ $quickinstall == false ]
+	then
+	    echo -n `prompt "rutorrent username [ admin ]: " `
+	    read rutorrentUsername
+	fi
+	if [[ "$rutorrentUsername" == "" ]] || [ $quickinstall == true ]
 	then
 	    rutorrentUsername=admin
 	fi
 
-	echo -n `prompt "rutorrent password [ password ]: "`
-	read rutorrentPassword
-	if [[ "$rutorrentPassword" == "" ]]
+	if [ $quickinstall == false ]
+	then
+	    echo -n `prompt "rutorrent password [ password ]: "`
+	    read rutorrentPassword
+	fi
+	if [[ "$rutorrentPassword" == "" ]] || [ $quickinstall == true ]
 	then
 	    rutorrentPassword=password
 	fi
@@ -176,8 +190,45 @@ passwordProtectRutorrent() {
     fi	
 }
 
-# Check for the presence of Entware before proceeding
-checkEntware
+# enable HTTPS connection for rutorrent.
+# Defaults to port 443
+sslLighttpd() {
+    if [ $quickinstall == false ]
+    then
+	echo -n `prompt "Enable SSL for rutorrent? [ y ]: "`
+	read enableSSL
+    fi
+    if [[ "$enableSSL" == "" ]] || [[ "$enableSSL" == "y" ]] || [ $quickinstall == true ]
+    then
+	opkg install openssl-util
+	cd /opt/etc/lighttpd/
+	if [ $quickinstall == true ]
+	then
+	    (echo ;echo ; echo ;echo ; echo ;echo ;echo ;) | openssl req -new -newkey rsa:1024 -days 3650 -nodes -x509 -keyout lighttpd.pem -out lighttpd.pem
+	else
+	    openssl req -new -newkey rsa:1024 -days 3650 -nodes -x509 -keyout lighttpd.pem -out lighttpd.pem
+	fi
+
+	echo "#ssl configuration" >> $lighttpdrc
+	echo "\$SERVER[\"socket\"] == \":443\" {" >> $lighttpdrc
+	echo "   ssl.engine = \"enable\"" >> $lighttpdrc
+	echo "   ssl.pemfile = \"/opt/etc/lighttpd/lighttpd.pem\"" >> $lighttpdrc
+	echo "}" >> $lighttpdrc
+	
+	/opt/etc/init.d/S80lighttpd restart
+    fi
+}
+
+# Perform quick or custom install
+echo -n `prompt "Perform Quick or Custom Install?(options: quick, custom) [quick]:"`
+read quickinstall
+if [[ "$quickinstall" == "" ]] || [[ "$quickinstall" == "quick" ]]
+then
+    quickinstall=true
+else
+    quickinstall=false
+fi
+
 
 # read the rtorrent work directory
 echo -n `prompt "Work directory for rtorrent [ /mnt/rtorrent/work ]: "` 
@@ -197,28 +248,48 @@ fi
 session=/opt/etc/rtorrent/session
 
 # read the rtorrent port range
-echo -n `prompt "Port range for rtorrent [ 51777-51780 ]: "`
-read port_range
-if [[ "$port_range" == "" ]]
+
+if [[ "$quickinstall" == true ]]
 then
     port_range=51777-51780
+else
+    echo -n `prompt "Port range for rtorrent [ 51777-51780 ]: "`
+    read port_range
+    if [[ "$port_range" == "" ]]
+    then
+	port_range=51777-51780
+    fi
 fi
 
 # read the rtorrent DHT port
-echo -n `prompt "DHT Port for rtorrent [ 6881 ]: "`
-read dhtport
-if [[ "$dhtport" == "" ]]
+if [[ "$quickinstall" == true ]]
 then
     dhtport=6881
+else
+    echo -n `prompt "DHT Port for rtorrent [ 6881 ]: "`
+    read dhtport
+    if [[ "$dhtport" == "" ]]
+    then
+	dhtport=6881
+    fi    
 fi
 
 # read lighttpd port
-echo -n `prompt "Port for lighttpd [ 8010 ]: "`
-read lighttpd_port
-if [[ "$lighttpd_port" == "" ]]
+
+if [[ "$quickinstall" == true ]]
 then
     lighttpd_port=8010
+else
+    echo -n `prompt "Port for lighttpd [ 8010 ]: "`
+    read lighttpd_port
+    if [[ "$lighttpd_port" == "" ]]
+    then
+	lighttpd_port=8010
+    fi
 fi
+
+# Check for the presence of Entware before proceeding
+checkEntware $quickinstall
 
 # enable this after script dev is finished
 # if [ "`which rtorrent`" !=  "" ]
@@ -401,22 +472,34 @@ sed -i "s/root \//$username \//g" /opt/etc/crontab
 info "Restarting the cron service ..."
 /opt/etc/init.d/S10cron restart
 
+passwordProtectRutorrent
+sslLighttpd
+
 
 info "rtorrent / rutorrent ready to download. "
 prompt "Navigate to http://routerip:$lighttpd_port/rutorrent to verify installation."
 prompt "Press Enter to continue" 5
 read continue
 
+
 success "Congratulations! You now have an awesome torrent server on your router."
-prompt "Ready to supercharge rutorrent with all the plugins? [ y ] :"
-read installpluginsprompt
-if [[ "$installpluginsprompt" == "" ]]
+
+if [[ "$quickinstall" == true ]]
 then
+    echo installing plugins
     installrutorrentplugins
     fixdiskpaceplugin
+else
+    prompt "Ready to supercharge rutorrent with all the plugins? [ y ] :"
+    read installpluginsprompt
+    if [[ "$installpluginsprompt" == "" ]]
+    then
+	echo installing plugins
+	installrutorrentplugins
+	fixdiskpaceplugin
+    fi
 fi
 
-passwordProtectRutorrent
 
 #### References ####
 # http://www.unix.com/shell-programming-scripting/158109-uncomment-comment-one-specific-line-config-file.html
