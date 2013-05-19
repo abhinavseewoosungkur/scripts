@@ -124,9 +124,9 @@ commentPHP() {
 
 # install all rutorrent plugins available when script is executed
 installrutorrentplugins() {
-    for plugin in `opkg list | grep rutorrent-plugin | awk '{print $1}'`
+    for plugin in `opkg list | grep rutorrent-plugin | awk '{print $1}' | grep -v '_task\|screenshots\|create\|mediainfo'`
     do
-	opkg install $plugin
+       	opkg install $plugin
     done
 }
 
@@ -492,7 +492,7 @@ then
 else
     prompt "Ready to supercharge rutorrent with all the plugins? [ y ] :"
     read installpluginsprompt
-    if [[ "$installpluginsprompt" == "" ]]
+    if [[ "$installpluginsprompt" == "" ]] || [ $installpluginsprompt == y ]
     then
 	echo installing plugins
 	installrutorrentplugins
