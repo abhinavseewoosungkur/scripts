@@ -42,28 +42,18 @@ escapeSlash() {
 }
 
 # Check if Entware is present on the router. 
-# If not, prompt for installation and update the repo.
+# If not, install it.
 checkEntware() {
     info "Checking presence of Entware ..."
     if [ "`which opkg`" == "" ] 
     then
 	warning "Entware not installed."
-	if [ $quickinstall == false ] 
-	then
-	    echo -n `prompt "Entware is needed to install rutorrent / rtorrent. Proceed with Entware installation? [ y ]"`
-	    read installentware
-	fi
-	if [[ "$installentware" == "" ]] || [ $quickinstall == true ]
-	then
-	    info "Installing Entware ..."
-	    wget -O - http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh
-	else
-	    exit 1
-	fi
+	info "Installing Entware ..."
+	wget -O - http://wl500g-repo.googlecode.com/svn/ipkg/entware_install.sh | sh
     else
 	info "Great! Entware found"
     fi
-
+    
     info "Updating the Entware repository ..."
     opkg update
 }
@@ -219,6 +209,20 @@ sslLighttpd() {
     fi
 }
 
+# Check the presence of rtorrent before proceeding
+# If found, exit 
+checkRtorrent() {
+if [ "`which rtorrent`" !=  "" ]
+then
+    error "rtorrent is present. It is recommended to run this script on a" 
+    error "freshly installed Entware. Remove rtorrent, rutorrent, lighttpd"
+    error "and all their configuration files before procedding."
+    exit 1
+fi
+}
+
+checkRtorrent
+
 # Perform quick or custom install
 echo -n `prompt "Perform Quick or Custom Install?(options: quick, custom) [quick]:"`
 read quickinstall
@@ -288,17 +292,9 @@ else
     fi
 fi
 
-# Check for the presence of Entware before proceeding
-checkEntware $quickinstall
+# Check for the presence of Entware and install if needed
+checkEntware
 
-# enable this after script dev is finished
-# if [ "`which rtorrent`" !=  "" ]
-# then
-#     error "rtorrent is present. It is recommended to run this script on a" 
-#     error "freshly installed Entware. Remove rtorrent, rutorrent, lighttpd"
-#     error "and all their configuration files before procedding."
-#     exit 1
-# fi
 
 info "Installing rtorrent and its dependencies ..."
 opkg install rtorrent screen dtach
