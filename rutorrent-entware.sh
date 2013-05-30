@@ -242,13 +242,7 @@ then
     work=/mnt/rtorrent/work
 fi
 
-# # read the rtorrent session directory
-# echo -n `prompt "Session directory for rtorrent [ /mnt/rtorrent/session ]: "`
-# read session
-# if [[ "$session" == "" ]] 
-# then
-#     session=/mnt/rtorrent/session
-# fi
+
 session=/opt/etc/rtorrent/session
 
 # read the rtorrent port range
@@ -356,8 +350,6 @@ echo "scgi.server = (" >> $lighttpdrc
 echo "        \"/RPC2\" =>" >> $lighttpdrc
 echo "               ( \"127.0.0.1\" =>"  >> $lighttpdrc
 echo "                        (" >> $lighttpdrc
-# echo "                                \"host\" => \"127.0.0.1\"",  >> $lighttpdrc
-# echo "                                \"port\" => 5000," >> $lighttpdrc
 echo "                                \"socket\" => \"/opt/var/rpc.socket\"," >> $lighttpdrc
 echo "                                \"check-local\" => \"disable\"" >> $lighttpdrc
 echo "                        )" >> $lighttpdrc
@@ -379,11 +371,6 @@ info "Installing php5-cli and php5-fastcgi"
 opkg install php5-cli
 opkg install php5-fastcgi
 
-# info "Fixing php link ..."
-# cd /opt/bin
-# ln -s php-cli php
-
-
 
 info "Restarting the lighttpd server ..."
 /opt/etc/init.d/S80lighttpd restart
@@ -396,14 +383,6 @@ opkg install rutorrent
 
 # Specify php path in rutorrent config
 sed -i "s/\"php\".*''/\"php\"  => '\/opt\/bin\/php-cli'/g" /opt/share/www/rutorrent/conf/config.php
-
-# info "Use port instead of socket for rutorrent"
-# commentPHP "$scgi_port = 0" /opt/share/www/rutorrent/conf/config.php
-# commentPHP "$scgi_host = \"unix" /opt/share/www/rutorrent/conf/config.php
-
-# uncommentPHP "$scgi_port = 5000" /opt/share/www/rutorrent/conf/config.php
-# uncommentPHP "$scgi_host = \"127" /opt/share/www/rutorrent/conf/config.php
-
 
 info "Deploying the rtorrent service script ..."
 info "Removing script if existent"
